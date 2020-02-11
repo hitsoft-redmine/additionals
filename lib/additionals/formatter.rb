@@ -49,30 +49,5 @@ module Additionals
         end
       end
     end
-
-    def inline_emojify(text)
-      text.gsub!(/:([\w+-]+):/) do |match|
-        emoji_code = Regexp.last_match(1)
-        emoji = Emoji.find_by_alias(emoji_code) # rubocop:disable Rails/DynamicFindBy
-        if emoji.present?
-          tag(:img,
-              src: inline_emojify_image_path(emoji.image_filename),
-              title: ":#{emoji_code}:",
-              style: 'vertical-align: middle',
-              width: '20',
-              height: '20')
-        else
-          match
-        end
-      end
-      text
-    end
-
-    def inline_emojify_image_path(image_filename)
-      path = Setting.protocol + '://' + Setting.host_name
-      # TODO: use relative path, if not for mailer
-      # path = '/' + Rails.public_path.relative_path_from Rails.root.join('public')
-      "#{path}/images/emoji/" + image_filename
-    end
   end
 end
