@@ -21,12 +21,11 @@ Additionals is a `Redmine`_ plugin for customizing Redmine, providing wiki macro
    :target: https://additionals.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
-.. image:: https://api.codeclimate.com/v1/badges/d92c0bda57f80e7c76b7/maintainability
-   :target: https://codeclimate.com/github/AlphaNodes/additionals/maintainability
-   :alt: Maintainability
+.. image:: https://github.com/AlphaNodes/additionals/workflows/Tests/badge.svg
+   :target: https://github.com/AlphaNodes/additionals/actions?query=workflow%3A"Run+Tests
 
-.. image:: https://travis-ci.org/AlphaNodes/additionals.svg?branch=master
-   :target: https://travis-ci.org/AlphaNodes/additionals
+.. image:: https://github.com/AlphaNodes/additionals/workflows/Run%20Linters/badge.svg
+   :target: https://github.com/AlphaNodes/additionals/actions?query=workflow%3A%22Run+Linters%22
 
 .. image:: https://img.shields.io/badge/rate%20at-redmine.org-blue.svg?style=flat
    :target: https://www.redmine.org/plugins/additionals
@@ -35,13 +34,17 @@ Additionals is a `Redmine`_ plugin for customizing Redmine, providing wiki macro
 Requirements
 ------------
 
-+--------------------+----------------------+
-| `Redmine`_ version | >= 4.0.0             |
-+--------------------+----------------------+
-| `Ruby`_ version    | >= 2.3.0             |
-+--------------------+----------------------+
-| Gem packages       | see `Gemfile`_       |
-+--------------------+----------------------+
++--------------------+-----------------------------------+
+| `Redmine`_ version | >= 4.1.0                          |
++--------------------+-----------------------------------+
+| `Ruby`_ version    | >= 2.4.0                          |
++--------------------+-----------------------------------+
+| Database version   | MySQL >= 5.7 or PostgreSQL >= 9.6 |
++--------------------+-----------------------------------+
+
+.. note:: If you use MySQL, make sure all database tables using the same storage engine (InnoDB is recommended) and character set (utf8mb4 is recommended).
+
+.. note:: For more information use the official `Redmine install documentation <https://www.redmine.org/projects/redmine/wiki/RedmineInstall>`_
 
 
 Installation
@@ -52,7 +55,7 @@ Install ``additionals`` plugin for `Redmine`_.
 .. code-block:: bash
 
   $ cd $REDMINE_ROOT
-  $ git clone -b v2-stable git://github.com/alphanodes/additionals.git plugins/additionals
+  $ git clone -b stable https://github.com/AlphaNodes/additionals.git plugins/additionals
   $ bundle install --without development test
   $ bundle exec rake redmine:plugins:migrate RAILS_ENV=production
   $
@@ -100,13 +103,14 @@ Uninstall ``additionals`` plugin for `Redmine`_.
 Features
 --------
 
-* use "Project guide" on project overview page
-* global header for all projects
-* global footer for all projects
-* welcome text for login page
-* global sidebar content support
-* set info message above new ticket (e.g. for guidelines)
-* wiki macros for:
+* Dashboard (Drag&Drop) Support
+* Text for login page
+* Global footer for all projects
+* Welcome text for login page
+* Global sidebar content support
+* Note for new issues above issue content (e.g. for guidelines)
+* PDF for wiki pages
+* Wiki macros for:
 
   * asciinema
   * cryptocompare
@@ -118,10 +122,13 @@ Features
   * group_users
   * iframe
   * issues
+  * last_updated_at
+  * last_updated_by
   * members
   * meteoblue
   * new_issue
   * projects
+  * recently_updated
   * reddit
   * redmine.org issue and wiki page (redmine_issue and reminde_wiki)
   * slideshare
@@ -141,7 +148,6 @@ Features
 * anonymize referrer for external urls
 * hide role in project memberbox
 * change issue author
-* spam protection on registration form
 * add involved issue users as watcher automatically
 * create issue on user profile
 * "assign to me" link on issue
@@ -166,14 +172,14 @@ Don't worry, if you only need a subset of the provided libraries. If you do not 
 
 It provides :
 
-* `Chart.js 2.9.3 <https://www.chartjs.org/>`_
+* `Chart.js 2.9.4 <https://www.chartjs.org/>`_
 * `Chart.js Plugin colorschemes 0.4.0 <https://github.com/nagix/chartjs-plugin-colorschemes>`_
 * `Chart.js Plugin datalabels 0.7.0 <https://github.com/chartjs/chartjs-plugin-datalabels>`_
-* `clipboardJS 2.0.4 <https://clipboardjs.com/>`_
-* `d3 5.15.0 <https://d3js.org/>`_
-* `d3plus v2.0.0-alpha.25 <https://d3plus.org/>`_
-* `FontAwesome 5.12.0 <https://fontawesome.com/>`_
-* `mermaid 8.4.6 <https://github.com/knsv/mermaid/>`_
+* `clipboardJS 2.0.6 <https://clipboardjs.com/>`_
+* `d3 6.5.0 <https://d3js.org/>`_
+* `d3plus v2.0.0-alpha.30 <https://d3plus.org/>`_
+* `FontAwesome 5.15.2 <https://fontawesome.com/>`_
+* `mermaid 8.9.0 <https://github.com/knsv/mermaid/>`_
 * `Select2 4.0.13 <https://select2.org/>`_
 
 And a set of various Rails helper methods (see below).
@@ -205,15 +211,18 @@ The following modules are available :
 Redmine Plugins, which are using ``additionals``
 ------------------------------------------------
 
-* `redmine_codimd <https://github.com/AlphaNodes/redmine_codimd>`_
+* `additional_tags <https://github.com/AlphaNodes/additional_tags>`_
+* `redmine_automation <https://alphanodes.com/redmine-automation>`_
 * `redmine_db <https://alphanodes.com/redmine-db>`_
 * `redmine_git_hosting <http://redmine-git-hosting.io/>`_
+* `redmine_hedgedoc <https://github.com/AlphaNodes/redmine_hedgedoc>`_
 * `redmine_hrm <https://alphanodes.com/redmine-hrm>`_
 * `redmine_omniauth_saml <https://github.com/alexandermeindl/redmine_omniauth_saml>`_
 * `redmine_passwords <https://alphanodes.com/redmine-passwords>`_
 * `redmine_postgresql_search <https://github.com/AlphaNodes/redmine_postgresql_search>`_
 * `redmine_privacy_terms <https://github.com/AlphaNodes/redmine_privacy_terms>`_
 * `redmine_reporting <https://alphanodes.com/redmine-reporting>`_
+* `redmine_sudo <https://github.com/AlphaNodes/redmine_sudo>`_
 
 If you know other plugins, which are using ``additionals``, please let us know or create a `PR <https://github.com/alphanodes/additionals/pulls>`_.
 
@@ -227,6 +236,7 @@ I am glad about your feedback on the plugin, `pull requests <https://github.com/
     :maxdepth: 2
 
     manual
+    dashboards
     macros
     tasks
     new_feature

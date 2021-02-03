@@ -1,12 +1,12 @@
 class AdditionalsFontAwesome
   include Redmine::I18n
 
-  FORMAT_REGEXP = /\Afa[rsb]\_[a-zA-Z0-9]+[a-zA-Z0-9\-]*\z/.freeze
+  FORMAT_REGEXP = /\Afa[rsb]_[a-zA-Z0-9]+[a-zA-Z0-9\-]*\z/.freeze
   SEARCH_LIMIT = 50
 
   class << self
     def load_icons(type)
-      data = YAML.safe_load(ERB.new(IO.read(Rails.root.join('plugins/additionals/config/fontawesome_icons.yml'))).result) || {}
+      data = YAML.safe_load(ERB.new(IO.read(File.join(Additionals.plugin_dir, 'config', 'fontawesome_icons.yml'))).result) || {}
       icons = {}
       data.each do |key, values|
         icons[key] = { unicode: values['unicode'], label: values['label'] } if values['styles'].include?(convert_type2style(type))
@@ -134,7 +134,7 @@ class AdditionalsFontAwesome
         break if SEARCH_LIMIT == cnt
 
         id = key2value(fa_symbol, type[-1])
-        next if !selected_store.include?(id) &&
+        next if selected_store.exclude?(id) &&
                 search.present? &&
                 (first_letter_search.present? && !values[:label].downcase.start_with?(first_letter_search) ||
                  first_letter_search.blank? && values[:label] !~ /#{search}/i)

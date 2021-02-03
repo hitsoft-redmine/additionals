@@ -1,4 +1,4 @@
-require File.expand_path('../../test_helper', __FILE__)
+require File.expand_path '../../test_helper', __FILE__
 
 class AdditionalsTest < Additionals::TestCase
   fixtures :projects, :users, :members, :member_roles, :roles,
@@ -50,10 +50,9 @@ class AdditionalsTest < Additionals::TestCase
   end
 
   def test_load_macros
-    assert_equal ['fa'], Additionals.load_macros(['fa'])
+    macros = Additionals.load_macros
 
-    assert_raises LoadError do
-      Additionals.load_macros(%w[fa invalid])
-    end
+    assert macros.count.positive?
+    assert(macros.detect { |macro| macro.include? 'fa_macro' })
   end
 end

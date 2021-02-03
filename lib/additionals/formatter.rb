@@ -39,10 +39,8 @@ module Additionals
           esc = Regexp.last_match(2)
           smiley = Regexp.last_match(3)
           if esc.nil?
-            leading + content_tag(:span,
-                                  '',
-                                  class: "additionals smiley smiley-#{name}",
-                                  title: smiley)
+            leading + tag.span(class: "additionals smiley smiley-#{name}",
+                               title: smiley)
           else
             leading + smiley
           end

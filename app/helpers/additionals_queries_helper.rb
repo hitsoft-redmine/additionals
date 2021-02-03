@@ -4,8 +4,8 @@ module AdditionalsQueriesHelper
   end
 
   def additionals_retrieve_query(object_type, options = {})
-    session_key = additionals_query_session_key(object_type)
-    query_class = Object.const_get("#{object_type.camelcase}Query")
+    session_key = additionals_query_session_key object_type
+    query_class = Object.const_get "#{object_type.camelcase}Query"
     if params[:query_id].present?
       additionals_load_query_id(query_class, session_key, params[:query_id], options, object_type)
     elsif api_request? ||
@@ -28,7 +28,7 @@ module AdditionalsQueriesHelper
     else
       # retrieve from session
       @query = query_class.find_by(id: session[session_key][:id]) if session[session_key][:id]
-      session_data = Rails.cache.read(additionals_query_cache_key(object_type))
+      session_data = Rails.cache.read additionals_query_cache_key(object_type)
       @query ||= query_class.new(name: '_',
                                  filters: session_data.nil? ? nil : session_data[:filters],
                                  group_by: session_data.nil? ? nil : session_data[:group_by],
@@ -52,9 +52,9 @@ module AdditionalsQueriesHelper
   end
 
   def additionals_load_query_id(query_class, session_key, query_id, options, object_type)
-    cond = 'project_id IS NULL'
-    cond << " OR project_id = #{@project.id}" if @project
-    @query = query_class.where(cond).find(query_id)
+    scope = query_class.where(project_id: nil)
+    scope = scope.or(query_class.where(project_id: @project.id)) if @project
+    @query = scope.find(query_id)
     raise ::Unauthorized unless @query.visible?
 
     @query.project = @project
@@ -73,18 +73,19 @@ module AdditionalsQueriesHelper
 
   def additionals_query_cache_key(object_type)
     project_id = @project ? @project.id : 0
-    "#{object_type}_query_data_#{session[:session_id]}_#{project_id}"
+    "#{object_type}_query_data_#{session.id}_#{project_id}"
   end
 
-  def additionals_select2_search_users(where_filter = '', where_params = {})
+  def additionals_select2_search_users(options = {})
     q = params[:q].to_s.strip
     exclude_id = params[:user_id].to_i
-    scope = User.active.where(type: 'User')
+    scope = User.active.where type: 'User'
+    scope = scope.visible unless options[:all_visible]
     scope = scope.where.not(id: exclude_id) if exclude_id.positive?
-    scope = scope.where(where_filter, where_params) if where_filter.present?
-    scope = scope.like(q) if q.present?
+    scope = scope.where(options[:where_filter], options[:where_params]) if options[:where_filter]
+    q.split.map { |search_string| scope = scope.like(search_string) } if q.present?
     scope = scope.order(last_login_on: :desc)
-                 .limit(params[:limit] || Additionals::SELECT2_INIT_ENTRIES)
+                 .limit(Additionals::SELECT2_INIT_ENTRIES)
     @users = scope.to_a.sort! { |x, y| x.name <=> y.name }
     render layout: false, partial: 'auto_completes/additionals_users'
   end
@@ -139,13 +140,13 @@ module AdditionalsQueriesHelper
   def xlsx_write_header_row(workbook, worksheet, columns)
     columns_width = []
     columns.each_with_index do |c, index|
-      value = if c.class.name == 'String'
+      value = if c.is_a? String
                 c
               else
                 c.caption.to_s
               end
 
-      worksheet.write(0, index, value, workbook.add_format(xlsx_cell_format(:header)))
+      worksheet.write 0, index, value, workbook.add_format(xlsx_cell_format(:header))
       columns_width << xlsx_get_column_width(value)
     end
     columns_width
@@ -223,13 +224,11 @@ module AdditionalsQueriesHelper
 
   def xlsx_hyperlink_cell?(token)
     # Match http, https or ftp URL
-    if token =~ %r{\A[fh]tt?ps?://}
-      true
-      # Match mailto:
-    elsif token.present? && token.start_with?('mailto:')
-      true
-      # Match internal or external sheet link
-    elsif token =~ /\A(?:in|ex)ternal:/
+    if %r{\A[fh]tt?ps?://}.match?(token) ||
+       # Match mailto:
+       token.present? && token.start_with?('mailto:') ||
+       # Match internal or external sheet link
+       /\A(?:in|ex)ternal:/.match?(token)
       true
     end
   end
@@ -238,7 +237,7 @@ module AdditionalsQueriesHelper
   # columns in ignored_column_names are skipped (names as symbols)
   # TODO: this is a temporary fix and should be removed
   # after https://www.redmine.org/issues/29830 is in Redmine core.
-  def query_as_hidden_field_tags(query, ignored_column_names = nil)
+  def query_as_hidden_field_tags(query)
     tags = hidden_field_tag('set_filter', '1', id: nil)
 
     if query.filters.present?
@@ -252,8 +251,10 @@ module AdditionalsQueriesHelper
     else
       tags << hidden_field_tag('f[]', '', id: nil)
     end
+
+    ignored_block_columns = query.block_columns.map(&:name)
     query.columns.each do |column|
-      next if ignored_column_names.present? && ignored_column_names.include?(column.name)
+      next if ignored_block_columns.include?(column.name)
 
       tags << hidden_field_tag('c[]', column.name, id: nil)
     end
@@ -266,5 +267,12 @@ module AdditionalsQueriesHelper
     tags << hidden_field_tag('sort', query.sort_criteria.to_param, id: nil) if query.sort_criteria.present?
 
     tags
+  end
+
+  def render_query_group_view(query, locals = {})
+    return if locals[:group_name].blank?
+
+    render partial: 'queries/additionals_group_view',
+           locals: { query: query }.merge(locals)
   end
 end

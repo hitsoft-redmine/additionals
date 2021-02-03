@@ -1,4 +1,4 @@
-require File.expand_path('../../test_helper', __FILE__)
+require File.expand_path '../../test_helper', __FILE__
 
 class TimeEntryTest < Additionals::TestCase
   fixtures :users, :email_addresses,
@@ -22,14 +22,14 @@ class TimeEntryTest < Additionals::TestCase
   def test_create_time_entry_without_issue
     entry = TimeEntry.generate(project: projects(:projects_001))
     assert entry.valid?
-    assert entry.save
+    assert_save entry
   end
 
   def test_create_time_entry_with_open_issue
     entry = TimeEntry.generate(issue: issues(:issues_002))
     assert_not entry.issue.closed?
     assert entry.valid?
-    assert entry.save
+    assert_save entry
   end
 
   def test_create_time_entry_with_closed_issue_without_permission
@@ -42,15 +42,15 @@ class TimeEntryTest < Additionals::TestCase
   end
 
   def test_create_time_entry_with_closed_issue_with_permission
-    User.current = users(:users_003)
+    User.current = users :users_003
     role = Role.create!(name: 'Additionals Tester', permissions: [:log_time_on_closed_issues])
     Member.where(user_id: User.current).delete_all
-    project = projects(:projects_001)
+    project = projects :projects_001
     Member.create!(principal: User.current, project_id: project.id, role_ids: [role.id])
 
     entry = TimeEntry.generate(issue: issues(:issues_008))
     assert entry.issue.closed?
     assert entry.valid?
-    assert entry.save
+    assert_save entry
   end
 end

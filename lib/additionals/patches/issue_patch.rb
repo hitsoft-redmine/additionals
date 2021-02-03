@@ -1,23 +1,39 @@
 module Additionals
   module Patches
     module IssuePatch
-      def self.included(base)
-        base.send(:include, InstanceMethods)
-        base.class_eval do
-          alias_method :editable_without_additionals?, :editable?
-          alias_method :editable?, :editable_with_additionals?
-          validate :validate_change_on_closed
-          validate :validate_timelog_required
-          validate :validate_current_user_status
-          before_validation :auto_assigned_to
-          before_save :change_status_with_assigned_to_change,
-                      :autowatch_involved
+      extend ActiveSupport::Concern
 
-          safe_attributes 'author_id',
-                          if: proc { |issue, user|
-                            issue.new_record? && user.allowed_to?(:change_new_issue_author, issue.project) ||
-                              issue.persisted? && user.allowed_to?(:edit_issue_author, issue.project)
-                          }
+      included do
+        include InstanceMethods
+
+        alias_method :editable_without_additionals?, :editable?
+        alias_method :editable?, :editable_with_additionals?
+        validate :validate_change_on_closed
+        validate :validate_timelog_required
+        validate :validate_current_user_status
+        before_validation :auto_assigned_to
+        before_save :change_status_with_assigned_to_change,
+                    :autowatch_involved
+
+        safe_attributes 'author_id',
+                        if: proc { |issue, user|
+                          issue.new_record? && user.allowed_to?(:change_new_issue_author, issue.project) ||
+                            issue.persisted? && user.allowed_to?(:edit_issue_author, issue.project)
+                        }
+      end
+
+      class_methods do
+        def join_issue_status(options = {})
+          sql = "JOIN #{IssueStatus.table_name} ON #{IssueStatus.table_name}.id = #{table_name}.status_id"
+          return sql unless options.key?(:is_closed)
+
+          sql << " AND #{IssueStatus.table_name}.is_closed ="
+          sql << if options[:is_closed]
+                   " #{connection.quoted_true}"
+                 else
+                   " #{connection.quoted_false}"
+                 end
+          sql
         end
       end
 
@@ -38,17 +54,19 @@ module Additionals
                     !watcher.active? ||
                     watched_by?(watcher)
 
-          add_watcher(watcher)
+          add_watcher watcher
         end
 
         def autowatch_involved
           return unless Additionals.setting?(:issue_autowatch_involved) &&
                         User.current.pref.autowatch_involved_issue
+          return if Redmine::Plugin.installed?('redmine_automation') && author_id == RedmineAutomation.bot_user_id
 
-          add_autowatcher(User.current)
+          add_autowatcher User.current
           add_autowatcher(author) if (new_record? || author_id != author_id_was) && author != User.current
-          unless assigned_to_id.nil? || assigned_to_id == User.current.id
-            add_autowatcher(assigned_to) if new_record? || assigned_to_id != assigned_to_id_was
+
+          if !assigned_to_id.nil? && assigned_to_id != User.current.id && (new_record? || assigned_to_id != assigned_to_id_was)
+            add_autowatcher assigned_to
           end
 
           true
@@ -59,11 +77,11 @@ module Additionals
         end
 
         def editable_with_additionals?(user = User.current)
-          return false unless editable_without_additionals?(user)
+          return false unless editable_without_additionals? user
           return true unless closed?
-          return true unless Additionals.setting?(:issue_freezed_with_close)
+          return true unless Additionals.setting? :issue_freezed_with_close
 
-          user.allowed_to?(:edit_closed_issues, project)
+          user.allowed_to? :edit_closed_issues, project
         end
       end
 
@@ -88,14 +106,10 @@ module Additionals
       end
 
       def status_x_affected?(new_status_id)
-        return false unless Additionals.setting?(:issue_current_user_status)
+        return false unless Additionals.setting? :issue_current_user_status
         return false if Additionals.setting(:issue_assign_to_x).blank?
 
-        if Additionals.setting(:issue_assign_to_x).include?(new_status_id.to_s)
-          true
-        else
-          false
-        end
+        Additionals.setting(:issue_assign_to_x).include? new_status_id.to_s
       end
 
       private

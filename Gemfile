@@ -1,7 +1,4 @@
-gem 'deface', '1.3.2'
-gem 'invisible_captcha'
-gem 'slim-rails'
+source 'https://rubygems.org'
 
-group :development, :test do
-  gem 'brakeman', require: false
-end
+# Specify your gem's dependencies in additionals.gemspec
+gemspec

@@ -33,6 +33,8 @@ module Additionals
                         .where("#{WikiContent.table_name}.updated_on > ?", User.current.today - days)
                         .order("#{WikiContent.table_name}.updated_on desc")
 
+        pages = pages.visible(User.current, project: project) if pages.respond_to? :visible
+
         s = []
         date = nil
         pages.each do |page_raw|
@@ -40,14 +42,14 @@ module Additionals
           updated_on = Date.new(content.updated_on.year, content.updated_on.month, content.updated_on.day)
           if date != updated_on
             date = updated_on
-            s << content_tag(:strong, format_date(date))
-            s << tag(:br)
+            s << tag.strong(format_date(date))
+            s << tag.br
           end
           s << link_to(content.page.pretty_title,
                        controller: 'wiki', action: 'show', project_id: content.page.project, id: content.page.title)
-          s << tag(:br)
+          s << tag.br
         end
-        content_tag('div', safe_join(s), class: 'recently-updated')
+        tag.div safe_join(s), class: 'recently-updated'
       end
     end
   end

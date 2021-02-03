@@ -1,4 +1,4 @@
-require File.expand_path('../../test_helper', __FILE__)
+require File.expand_path '../../test_helper', __FILE__
 
 class WikiControllerTest < Additionals::ControllerTest
   fixtures :projects,
@@ -25,7 +25,7 @@ class WikiControllerTest < Additionals::ControllerTest
   def setup
     prepare_tests
     EnabledModule.create(project_id: 1, name: 'wiki')
-    @project = projects(:projects_001)
+    @project = projects :projects_001
     @wiki = @project.wiki
     @page_name = 'additionals_macro_test'
     @page = @wiki.find_or_new_page(@page_name)
@@ -51,7 +51,7 @@ class WikiControllerTest < Additionals::ControllerTest
     get :show,
         params: { project_id: 1, id: @page_name }
     assert_response :success
-    assert_select 'iframe', src: %r{^https\://www\.meteoblue\.com/en/weather/widget/daily/(.*)}
+    assert_select 'iframe', src: %r{^https://www\.meteoblue\.com/en/weather/widget/daily/(.*)}
   end
 
   def test_show_with_vimeo_macro
@@ -301,7 +301,7 @@ class WikiControllerTest < Additionals::ControllerTest
         params: { project_id: 1, id: @page_name }
     assert_response :success
     assert_select 'div.wiki div.cryptocompare',
-                  text: %r{https:\/\/widgets\.cryptocompare\.com\/serve\/v3\/coin\/header\?fsyms=BTC,ETH&tsyms=EUR}
+                  text: %r{https://widgets\.cryptocompare\.com/serve/v3/coin/header\?fsyms=BTC,ETH&tsyms=EUR}
   end
 
   def test_show_with_date_macro
@@ -433,6 +433,27 @@ class WikiControllerTest < Additionals::ControllerTest
                   text: '#2 Add ingredients categories'
   end
 
+  def test_show_user_with_current_user
+    @request.session[:user_id] = WIKI_MACRO_USER_ID
+    @page.content.text = '{{user(current_user)}}'
+    @page.content.save!
+    get :show,
+        params: { project_id: 1, id: @page_name }
+    assert_response :success
+    assert_select '#content a.user.active[href=?]', '/users/2',
+                  text: 'John Smith'
+  end
+
+  def test_show_user_with_current_user_as_text
+    @request.session[:user_id] = WIKI_MACRO_USER_ID
+    @page.content.text = '{{user(current_user, text=true)}}'
+    @page.content.save!
+    get :show,
+        params: { project_id: 1, id: @page_name }
+    assert_response :success
+    assert_select '#content span.user.active', text: 'John Smith'
+  end
+
   def test_show_user_with_id
     @request.session[:user_id] = WIKI_MACRO_USER_ID
     @page.content.text = '{{user(1)}}'
@@ -440,7 +461,7 @@ class WikiControllerTest < Additionals::ControllerTest
     get :show,
         params: { project_id: 1, id: @page_name }
     assert_response :success
-    assert_select 'a[href=?]', '/users/1',
+    assert_select '#content a[href=?]', '/users/1',
                   text: 'Redmine Admin'
   end
 
@@ -451,8 +472,8 @@ class WikiControllerTest < Additionals::ControllerTest
     get :show,
         params: { project_id: 1, id: @page_name }
     assert_response :success
-    assert_select 'a.user', text: 'Redmine Admin'
-    assert_select 'a[href=?]', '/users/1',
+    assert_select '#content a.user', text: 'Redmine Admin'
+    assert_select '#content a[href=?]', '/users/1',
                   text: 'Redmine Admin'
   end
 
@@ -463,8 +484,8 @@ class WikiControllerTest < Additionals::ControllerTest
     get :show,
         params: { project_id: 1, id: @page_name }
     assert_response :success
-    assert_select 'a[href=?]', '/users/2',
-                  text: 'jsmith'
+    assert_select '#content a[href=?]', '/users/2',
+                  text: 'John Smith'
   end
 
   def test_show_user_with_name_fullname
@@ -474,48 +495,8 @@ class WikiControllerTest < Additionals::ControllerTest
     get :show,
         params: { project_id: 1, id: @page_name }
     assert_response :success
-    assert_select 'a.user', text: 'John Smith'
-    assert_select 'a[href=?]', '/users/2',
+    assert_select '#content a.user', text: 'John Smith'
+    assert_select '#content a[href=?]', '/users/2',
                   text: 'John Smith'
-  end
-
-  def test_show_wiki_with_header
-    with_additionals_settings(global_wiki_header: 'Lore impsuum') do
-      get :show,
-          params: { project_id: 1, id: 'Another_page' }
-
-      assert_response :success
-      assert_select 'div#wiki_extentions_header', text: /Lore impsuum/
-    end
-  end
-
-  def test_show_wiki_without_header
-    with_additionals_settings(global_wiki_header: '') do
-      get :show,
-          params: { project_id: 1, id: 'Another_page' }
-
-      assert_response :success
-      assert_select 'div#wiki_extentions_header', count: 0
-    end
-  end
-
-  def test_show_wiki_with_footer
-    with_additionals_settings(global_wiki_footer: 'Lore impsuum') do
-      get :show,
-          params: { project_id: 1, id: 'Another_page' }
-
-      assert_response :success
-      assert_select 'div#wiki_extentions_footer', text: /Lore impsuum/
-    end
-  end
-
-  def test_show_wiki_without_footer
-    with_additionals_settings(global_wiki_footer: '') do
-      get :show,
-          params: { project_id: 1, id: 'Another_page' }
-
-      assert_response :success
-      assert_select 'div#wiki_extentions_footer', count: 0
-    end
   end
 end

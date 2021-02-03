@@ -37,7 +37,7 @@ module Additionals
         args, options = extract_macro_options(args, :class, :title, :text, :size, :color, :link)
         raise 'The correct usage is {{fa(<ICON>, class=CLASS, title=TITLE, text=TEXT, size=SIZE, color=COLOR)}}' if args.empty?
 
-        values = args[0].split('_')
+        values = args[0].split '_'
 
         classes = []
         if values.count == 2
@@ -48,21 +48,21 @@ module Additionals
           classes << "fa-#{values[0]}"
         end
 
-        classes += options[:class].split(' ') if options[:class].present?
+        classes += options[:class].split if options[:class].present?
         classes << "fa-#{options[:size]}" if options[:size].present?
 
         content_options = { class: classes.uniq.join(' ') }
         content_options[:title] = options[:title] if options[:title].present?
         content_options[:style] = "color: #{options[:color]}" if options[:color].present?
 
-        text = options[:text].present? ? ' ' + options[:text] : ''
+        text = options[:text].present? ? " #{options[:text]}" : ''
 
         if options[:link].present?
-          content_tag(:a, href: options[:link]) do
-            content_tag(:i, text, content_options)
+          tag.a href: options[:link] do
+            tag.i text, content_options
           end
         else
-          content_tag(:i, text, content_options)
+          tag.i text, content_options
         end
       end
     end

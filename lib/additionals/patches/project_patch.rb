@@ -1,26 +1,56 @@
 module Additionals
   module Patches
     module ProjectPatch
-      def self.included(base)
-        base.send(:prepend, InstancOverwriteMethods)
-        base.send(:include, InstanceMethods)
+      extend ActiveSupport::Concern
+
+      included do
+        prepend InstanceOverwriteMethods
+        include InstanceMethods
+
+        has_many :dashboards, dependent: :destroy
       end
 
-      module InstancOverwriteMethods
+      module InstanceOverwriteMethods
+        # this change take care of hidden roles and performance issues (includes for hrm, if installed)
         def users_by_role
-          roles_with_users = super
-          roles_with_users.each do |role_with_users|
-            role = role_with_users.first
-            next unless role.hide
+          if Redmine::VERSION.to_s >= '4.2'
+            includes = Redmine::Plugin.installed?('redmine_hrm') ? [:roles, { principal: :hrm_user_type }] : %i[roles principal]
+            memberships.includes(includes).each_with_object({}) do |m, h|
+              m.roles.each do |r|
+                next if r.hide && !User.current.allowed_to?(:show_hidden_roles_in_memberbox, project)
 
-            roles_with_users.delete(role) unless User.current.allowed_to?(:show_hidden_roles_in_memberbox, project)
+                h[r] ||= []
+                h[r] << m.principal
+              end
+              h
+            end
+          else
+            includes = Redmine::Plugin.installed?('redmine_hrm') ? [:roles, { user: :hrm_user_type }] : %i[roles user]
+            members.includes(includes).each_with_object({}) do |m, h|
+              m.roles.each do |r|
+                next if r.hide && !User.current.allowed_to?(:show_hidden_roles_in_memberbox, project)
+
+                h[r] ||= []
+                h[r] << m.user
+              end
+              h
+            end
           end
-
-          roles_with_users
         end
       end
 
       module InstanceMethods
+        # without hidden roles!
+        def all_principals_by_role
+          memberships.includes(:principal, :roles).each_with_object({}) do |m, h|
+            m.roles.each do |r|
+              h[r] ||= []
+              h[r] << m.principal
+            end
+            h
+          end
+        end
+
         def visible_principals
           query = ::Query.new(project: self, name: '_')
           query&.principals
@@ -34,10 +64,9 @@ module Additionals
         # assignable_users result depends on Setting.issue_group_assignment?
         # this result is not depending on issue settings
         def assignable_users_and_groups
-          Principal.active
+          Principal.assignable
                    .joins(members: :roles)
-                   .where(type: %w[User Group],
-                          members: { project_id: id },
+                   .where(members: { project_id: id },
                           roles: { assignable: true })
                    .distinct
                    .sorted
